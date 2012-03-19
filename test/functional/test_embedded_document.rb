@@ -12,7 +12,7 @@ class EmbeddedDocumentTest < Test::Unit::TestCase
     end
 
     @klass.many :pets, :class => @pet_klass
-
+    
     @address_class = EDoc('Address') do
       key :city, String
       key :state, String
@@ -284,5 +284,26 @@ class EmbeddedDocumentTest < Test::Unit::TestCase
   should "have collection instance method that is equal to root document" do
     person = @klass.create(:pets => [@pet_klass.new(:name => 'sparky')])
     person.pets.first.collection.name.should == person.collection.name
+  end
+  
+  context "Hacking out callbacks" do    
+    setup do
+      @no_callback_pet_klass = EDoc('NoCallbackPet') do
+        key :name, String
+        def self.__hack__no_callbacks() true; end
+      end
+      
+      @klass.many :no_callback_pets, :class => @no_callback_pet_klass
+    end
+    
+    should "be able to save 1000 embedded documents when callbacks are disabled" do
+      person = @klass.create
+      
+      1000.times do |i|
+        pet = @no_callback_pet_klass.new(:name => "sparky#{i}")
+        person.no_callback_pets << pet
+      end
+      person.save #should not overflow stack
+    end
   end
 end

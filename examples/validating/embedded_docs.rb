@@ -10,10 +10,18 @@ class Field
   validates_presence_of :name
 end
 
+class KField
+  include MongoMapper::EmbeddedDocument
+  key :name
+  
+  def self.__hack__no_callbacks() true; end
+end
+
 class Template
   include MongoMapper::Document
   key :name
   many :fields
+  many :k_fields
 
   # This tells the template to validate all
   # fields when validating the template.
@@ -27,3 +35,8 @@ puts template.valid? # false
 # Name is present on embedded field
 template = Template.new(:fields => [Field.new(:name => 'Yay')])
 puts template.valid? # true
+
+# Stack level too deep occurrs with 1000 embedded documents, even when they don't have callbacks or validations.
+# But you can use our little hack (above) to get around this...
+1000.times { template.k_fields << KField.new(:name => "K") }
+puts "can we save without overlfowing the stack? #{template.save}"
